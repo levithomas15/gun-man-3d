@@ -403,6 +403,8 @@ MonoBehaviour:
   maxHealth: 30
   respawnDelay: 4
   applyImpactForceToRigidbody: 1
+  regenPerSecond: 0
+  regenDelay: 5
   onDamaged:
     m_PersistentCalls:
       m_Calls: []

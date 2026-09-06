@@ -45,3 +45,6 @@ crashlytics-build.properties
 
 # Claude local
 .claude/settings.local.json
+
+# Mono crash dumps
+mono_crash.*

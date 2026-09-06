@@ -91,6 +91,150 @@ namespace GunMan.Tests
         }
 
         [UnityTest]
+        public IEnumerator Village_PlayerTakesDamageDiesAndRespawns()
+        {
+            yield return LoadScene("Village");
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            Assert.IsNotNull(player);
+            Assert.IsNotNull(player.Health, "player has no Health component");
+            Assert.AreEqual(player.Health.maxHealth, player.Health.Current);
+
+            player.Health.TakeDamage(new DamageInfo { Amount = 30f, Point = player.transform.position, Direction = Vector3.forward });
+            Assert.AreEqual(player.Health.maxHealth - 30f, player.Health.Current, 0.01f);
+            Assert.IsFalse(player.IsDead);
+            Assert.Greater(player.LastHitTime, -1f, "HUD hit feedback not triggered");
+
+            player.respawnDelay = 0.5f;
+            player.Health.TakeDamage(new DamageInfo { Amount = 1000f, Point = player.transform.position, Direction = Vector3.forward });
+            yield return null;
+            Assert.IsTrue(player.IsDead);
+            Assert.AreEqual(1, player.Deaths);
+            yield return new WaitForSeconds(1.2f);
+            Assert.IsFalse(player.IsDead, "player should have respawned");
+            Assert.AreEqual(player.Health.maxHealth, player.Health.Current, 0.01f);
+            Assert.IsTrue(Object.FindAnyObjectByType<WeaponHolder>() != null, "weapons should be back after respawn");
+        }
+
+        [UnityTest]
+        public IEnumerator Village_ArmedNpcsCarryDifferentWeapons()
+        {
+            yield return LoadScene("Village");
+            yield return null;
+            var npcs = Object.FindObjectsByType<NpcCharacter>(FindObjectsSortMode.None);
+            var armed = npcs.Where(n => n.IsArmed).ToList();
+            Assert.GreaterOrEqual(armed.Count, 4, "expected at least 4 armed NPCs");
+            Assert.GreaterOrEqual(npcs.Count(n => !n.IsArmed), 2, "expected some civilians too");
+            Assert.IsTrue(armed.All(n => n.role == NpcRole.Soldier), "armed NPCs should be soldiers");
+            var names = armed.Select(n => n.weapon.displayName).Distinct().ToList();
+            Assert.GreaterOrEqual(names.Count, 3, $"expected different weapons, got: {string.Join(", ", names)}");
+            foreach (var n in armed)
+            {
+                Assert.IsTrue(n.weapon.transform.IsChildOf(n.transform), $"{n.name}: weapon not part of the NPC");
+                Assert.IsNotNull(n.weapon.muzzle, $"{n.name}: weapon has no muzzle");
+                var handBone = n.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "hand_r");
+                Assert.IsNotNull(handBone, $"{n.name}: hand_r bone missing");
+                Assert.IsTrue(n.weapon.transform.IsChildOf(handBone), $"{n.name}: weapon not attached to the right hand");
+                Assert.AreEqual(1f, n.weapon.transform.lossyScale.x, 0.05f, $"{n.name}: weapon scale wrong");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Village_PeacefulModeNobodyAttacks()
+        {
+            yield return LoadScene("Village");
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            var director = CombatDirector.Instance;
+            Assert.IsNotNull(director, "CombatDirector missing");
+            Assert.IsFalse(director.CombatMode, "combat mode should be off by default");
+
+            // stand in the middle of the plaza for a while
+            var cc = player.GetComponent<CharacterController>();
+            cc.enabled = false;
+            player.transform.position = new Vector3(0f, 0.1f, 0f);
+            cc.enabled = true;
+            float start = player.Health.Current;
+            yield return new WaitForSeconds(3f);
+            Assert.AreEqual(0, NpcCharacter.All.Count(n => n.IsEngaged), "nobody should attack in peaceful mode");
+            Assert.AreEqual(0, NpcCharacter.All.Sum(n => n.ShotsFired), "nobody should shoot in peaceful mode");
+            Assert.AreEqual(start, player.Health.Current, 0.01f);
+        }
+
+        [UnityTest]
+        public IEnumerator Village_CombatModeHasExactlyOneOpponent()
+        {
+            yield return LoadScene("Village");
+            yield return new WaitForSeconds(0.3f);
+            var director = CombatDirector.Instance;
+            director.handoverDelay = 0.5f;
+            director.SetCombatMode(true);
+            Assert.IsTrue(director.CombatMode);
+
+            float t = 0f;
+            while (t < 4f && director.Opponent == null) { t += Time.deltaTime; yield return null; }
+            var first = director.Opponent;
+            Assert.IsNotNull(first, "no opponent picked");
+            Assert.IsTrue(first.IsArmed);
+            yield return new WaitForSeconds(0.5f);
+            Assert.AreEqual(1, NpcCharacter.All.Count(n => n.IsEngaged), "exactly one NPC must be attacking");
+            Assert.IsTrue(first.IsEngaged);
+
+            // kill it -> next opponent with a different weapon takes over
+            string firstWeapon = first.weapon.displayName;
+            first.Health.TakeDamage(new DamageInfo { Amount = 1000f, Point = first.transform.position, Direction = Vector3.forward });
+            yield return null;
+            yield return null;
+            Assert.IsNull(director.Opponent, "dead opponent should be cleared");
+            Assert.AreEqual(1, director.Defeated);
+            t = 0f;
+            while (t < 4f && director.Opponent == null) { t += Time.deltaTime; yield return null; }
+            var second = director.Opponent;
+            Assert.IsNotNull(second, "no second opponent picked");
+            Assert.AreNotEqual(first, second);
+            Assert.AreNotEqual(firstWeapon, second.weapon.displayName, "next opponent should carry a different weapon");
+            Assert.LessOrEqual(NpcCharacter.All.Count(n => n.IsEngaged), 1);
+
+            // switching combat mode off stops the attack
+            director.SetCombatMode(false);
+            yield return null;
+            yield return null;
+            Assert.IsNull(director.Opponent);
+            Assert.AreEqual(0, NpcCharacter.All.Count(n => n.IsEngaged), "nobody should attack after leaving combat mode");
+        }
+
+        [UnityTest]
+        public IEnumerator Arena_OpponentShootsThePlayer()
+        {
+            yield return LoadScene("Arena");
+            yield return new WaitForSeconds(0.3f);
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            Assert.IsNotNull(player);
+            var soldier = Object.FindObjectsByType<NpcCharacter>(FindObjectsSortMode.None).FirstOrDefault(n => n.IsArmed);
+            Assert.IsNotNull(soldier, "no soldier in the arena");
+
+            // put the soldier 8 m in front of the player with a clear line of sight and perfect aim, then make it the opponent
+            var agent = soldier.GetComponent<NavMeshAgent>();
+            Vector3 wanted = player.transform.position + player.transform.forward * 8f;
+            Assert.IsTrue(NavMesh.SamplePosition(wanted, out var hit, 3f, NavMesh.AllAreas), "no NavMesh in front of the player");
+            agent.Warp(hit.position);
+            soldier.weapon.spreadDegrees = 0f;
+            float startHealth = player.Health.Current;
+            CombatDirector.Instance.ForceOpponent(soldier);
+            Assert.IsTrue(soldier.IsOpponent);
+
+            float t = 0f;
+            while (t < 8f && (soldier.ShotsFired == 0 || player.Health.Current >= startHealth))
+            {
+                t += Time.deltaTime;
+                yield return null;
+            }
+            Assert.Greater(soldier.ShotsFired, 0, "opponent never fired");
+            Assert.IsTrue(soldier.IsEngaged, "opponent should be engaged");
+            Assert.Less(player.Health.Current, startHealth, "player was never hit");
+            Assert.Greater(player.LastHitTime, 0f, "player hit feedback missing");
+            Assert.AreEqual(1, NpcCharacter.All.Count(n => n.IsEngaged), "only the opponent may attack");
+        }
+
+        [UnityTest]
         public IEnumerator Arena_LoadsWithPlayer()
         {
             yield return LoadScene("Arena");

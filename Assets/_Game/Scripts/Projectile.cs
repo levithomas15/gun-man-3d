@@ -17,10 +17,12 @@ namespace GunMan
         public float fuseSeconds = 0f;
         public float maxLifetime = 12f;
         public bool useGravity = false;
+        [Range(0f, 1f)] public float selfDamageFactor = 0.3f;
         public ParticleSystem trail;
 
         Rigidbody _rb;
         GameObject _owner;
+        Health _ownerHealth;
         bool _exploded;
         float _launchTime;
 
@@ -35,6 +37,7 @@ namespace GunMan
         public void Launch(Vector3 velocity, GameObject owner)
         {
             _owner = owner;
+            _ownerHealth = owner != null ? owner.GetComponentInParent<Health>() : null;
             _launchTime = Time.time;
             _rb.linearVelocity = velocity;
             if (!useGravity) transform.rotation = Quaternion.LookRotation(velocity);
@@ -99,6 +102,8 @@ namespace GunMan
                 var target = col.GetComponentInParent<IDamageable>();
                 if (target != null)
                 {
+                    // the shooter only takes a fraction of their own explosion damage (rocket jumps stay survivable)
+                    if (_ownerHealth != null && ReferenceEquals(target, _ownerHealth)) dmg.Amount *= selfDamageFactor;
                     if (damagedRoots.Add(target)) target.TakeDamage(dmg);
                 }
                 else if (col.attachedRigidbody != null)

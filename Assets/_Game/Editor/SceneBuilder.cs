@@ -16,7 +16,19 @@ namespace GunMan.EditorTools
     {
         public class Prefabs
         {
-            public GameObject player, npc, target, ammo, crate, fxLibrary;
+            public GameObject player, target, ammo, crate, fxLibrary;
+            public PrefabBuilder.NpcPrefabs npcs;
+        }
+
+        /// <summary>One NPC to place: position, role and (for armed roles) the weapon file name from the NPC weapon table.</summary>
+        public struct NpcSpawn
+        {
+            public Vector3 pos;
+            public NpcRole role;
+            public string weapon;
+
+            public static NpcSpawn Civilian(Vector3 p) => new NpcSpawn { pos = p, role = NpcRole.Civilian };
+            public static NpcSpawn Soldier(Vector3 p, string weapon) => new NpcSpawn { pos = p, role = NpcRole.Soldier, weapon = weapon };
         }
 
         public struct SceneResult
@@ -159,7 +171,10 @@ namespace GunMan.EditorTools
             var gm = new GameObject("GameManager");
             gm.transform.SetParent(gameplay.transform, false);
             gm.AddComponent<GameManager>().player = player.GetComponent<PlayerController>();
-            gm.AddComponent<GameHud>().holder = player.GetComponentInChildren<WeaponHolder>();
+            var hud = gm.AddComponent<GameHud>();
+            hud.holder = player.GetComponentInChildren<WeaponHolder>();
+            hud.player = player.GetComponent<PlayerController>();
+            gm.GetComponent<GameManager>().combat = gm.AddComponent<CombatDirector>();
         }
 
         static void PlaceOnGround(GameObject go, Vector3 xz, float yOffset = 0f)
@@ -170,15 +185,28 @@ namespace GunMan.EditorTools
             else go.transform.position = new Vector3(xz.x, yOffset, xz.z);
         }
 
-        static void SpawnNpcs(Prefabs prefabs, Transform parent, IEnumerable<Vector3> positions, float wanderRadius)
+        static void SpawnNpcs(Prefabs prefabs, Transform parent, IEnumerable<NpcSpawn> spawns, float wanderRadius)
         {
             int i = 0;
-            foreach (var p in positions)
+            foreach (var sp in spawns)
             {
-                var npc = BuildUtil.Instantiate(prefabs.npc, parent, $"NPC_{i++}");
-                PlaceOnGround(npc, p);
+                GameObject prefab = prefabs.npcs.unarmed;
+                if (sp.role != NpcRole.Civilian)
+                {
+                    prefab = prefabs.npcs.armed.FirstOrDefault(a => a.name == $"NPC_{sp.weapon}");
+                    if (prefab == null)
+                    {
+                        Debug.LogWarning($"[GunMan] armed NPC prefab NPC_{sp.weapon} missing, using unarmed");
+                        prefab = prefabs.npcs.unarmed;
+                    }
+                }
+                string label = sp.role == NpcRole.Civilian ? "NPC" : $"Soldier_{sp.weapon}";
+                var npc = BuildUtil.Instantiate(prefab, parent, $"{label}_{i++}");
+                PlaceOnGround(npc, sp.pos);
                 npc.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                npc.GetComponent<NpcCharacter>().wanderRadius = wanderRadius;
+                var character = npc.GetComponent<NpcCharacter>();
+                character.wanderRadius = wanderRadius;
+                if (prefab != prefabs.npcs.unarmed) character.role = sp.role;
             }
         }
 
@@ -330,16 +358,22 @@ namespace GunMan.EditorTools
 
             SpawnAmmo(prefabs, gameplay.transform, new[] { new Vector3(-10f, 0f, 0f), new Vector3(10f, 0f, 9f), new Vector3(0f, 0f, -30f), new Vector3(40f, 0f, 0f) });
 
-            var npcPositions = new List<Vector3>();
+            // 12 NPCs on three rings: civilians on the plaza, soldiers (one per weapon type) around the houses and outskirts
+            var npcSpawns = new List<NpcSpawn>();
+            string[] soldierWeapons = { "pew", "mac10", "ak47", "shotgun", "awp", "ak47" };
+            int soldier = 0;
             for (int i = 0; i < 12; i++)
             {
                 float a = i * 30f * Mathf.Deg2Rad;
                 float r = i % 3 == 0 ? 8f : (i % 3 == 1 ? 20f : 38f);
-                npcPositions.Add(new Vector3(Mathf.Sin(a) * r, 0f, Mathf.Cos(a) * r));
+                var p = new Vector3(Mathf.Sin(a) * r, 0f, Mathf.Cos(a) * r);
+                if (i % 3 == 0) npcSpawns.Add(NpcSpawn.Civilian(p));
+                else if (i % 3 == 1 || (i / 3) % 2 == 0) npcSpawns.Add(NpcSpawn.Soldier(p, soldierWeapons[soldier++ % soldierWeapons.Length]));
+                else npcSpawns.Add(NpcSpawn.Civilian(p));
             }
 
             BakeNavMesh(env, $"{BuildUtil.SceneDir}/NavMesh-Village.asset");
-            SpawnNpcs(prefabs, gameplay.transform, npcPositions, 18f);
+            SpawnNpcs(prefabs, gameplay.transform, npcSpawns, 18f);
 
             Vector3 spawn = new Vector3(-11.5f, 0.1f, -11.5f);
             float spawnYaw = 65f; // look towards the plaza / shooting range
@@ -413,11 +447,18 @@ namespace GunMan.EditorTools
             SpawnTargets(prefabs, gameplay.transform, targets);
             SpawnAmmo(prefabs, gameplay.transform, new[] { new Vector3(0f, 0f, -D / 2f + 5f), new Vector3(-W / 2f + 6f, 0f, D / 2f - 8f), new Vector3(W / 2f - 8f, 0f, D / 2f - 8f) });
 
-            var npcPositions = new List<Vector3>();
-            for (int i = 0; i < 10; i++) npcPositions.Add(new Vector3(kit.Rand(-W / 2f + 6f, W / 2f - 6f), 0f, kit.Rand(-D / 2f + 6f, D / 2f - 6f)));
+            // the arena is the combat map: mostly soldiers, placed on the far side from the player spawn
+            var npcSpawns = new List<NpcSpawn>();
+            string[] arenaWeapons = { "ak47", "pew", "shotgun", "mac10", "awp", "ak47", "pew", "mac10" };
+            for (int i = 0; i < 10; i++)
+            {
+                var p = new Vector3(kit.Rand(-W / 2f + 6f, W / 2f - 6f), 0f, kit.Rand(-D / 2f + 6f, D / 2f - 6f));
+                if (i < 2) npcSpawns.Add(NpcSpawn.Civilian(p));
+                else npcSpawns.Add(NpcSpawn.Soldier(new Vector3(Mathf.Abs(p.x), 0f, p.z), arenaWeapons[i - 2]));
+            }
 
             BakeNavMesh(env, $"{BuildUtil.SceneDir}/NavMesh-Arena.asset");
-            SpawnNpcs(prefabs, gameplay.transform, npcPositions, 22f);
+            SpawnNpcs(prefabs, gameplay.transform, npcSpawns, 22f);
 
             Vector3 spawn = new Vector3(-W / 2f + 6f, 0.1f, 0f);
             float spawnYaw = 90f;

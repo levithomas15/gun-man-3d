@@ -1,7 +1,8 @@
 # Gun Man 3D
 
 First-Person-Shooter-Prototyp in **Unity 6 (6000.6.0f1, URP)**.
-Zwei Karten, neun Waffen, animierte NPC-Dummies, Schießstand-Ziele, Munitionskisten.
+Zwei Karten, neun Waffen, animierte NPCs (Zivilisten und bewaffnete Soldaten), umschaltbarer Kampfmodus,
+Schießstand-Ziele, Munitionskisten.
 
 ## Steuerung
 
@@ -17,7 +18,9 @@ Zwei Karten, neun Waffen, animierte NPC-Dummies, Schießstand-Ziele, Munitionski
 | R | Nachladen |
 | 1–9, Mausrad, Q | Waffe wechseln / letzte Waffe |
 | M, F1, F2 | Karte wechseln |
+| K | Kampfmodus an/aus |
 | F5 | Respawn |
+| H | Tastenhinweise ein-/ausblenden |
 | Esc | Maus freigeben (Klick sperrt sie wieder) |
 
 ## Waffen
@@ -29,11 +32,25 @@ Hitscan-Waffen hinterlassen Einschusslöcher und Funken, Explosionen haben Radiu
 Physik-Impuls und Kamerawackeln. Alle Sounds werden zur Laufzeit synthetisiert
 (`ProceduralAudio.cs`), es gibt also noch keine Audio-Assets.
 
+## Gegner und Kampfmodus
+
+- **Zivilisten** (bunt) laufen herum und fliehen, wenn man auf sie schießt.
+- **Soldaten** (dunkel gekleidet) tragen je eine Waffe aus dem Waffenpack in der rechten Hand
+  (Pistole, MAC-10, AK-47, Schrotflinte, AWP). Im normalen Modus patrouillieren sie friedlich.
+- **Kampfmodus (K)**: Der `CombatDirector` macht genau *einen* Soldaten zum Gegner. Er verfolgt den Spieler
+  über die Karte, hält seine bevorzugte Distanz und schießt in Salven. Stirbt er, übernimmt nach drei Sekunden
+  der nächste Soldat mit einer anderen Waffe (Runden-Zähler im HUD). Es greift nie mehr als ein Gegner
+  gleichzeitig an. K beendet den Kampfmodus wieder.
+- **Spieler-Health**: 100 Lebenspunkte mit Lebensbalken unten links, roter Trefferblitz mit Richtungspfeil,
+  Regeneration nach sechs Sekunden ohne Schaden. Bei 0 kippt die Kamera, nach 3,5 s (oder F5) Respawn
+  mit vollem Leben und voller Munition. Eigene Explosionen richten nur 30 % Schaden an einem selbst an.
+- Balance der NPC-Waffen (Schaden, Streuung, Salven, Pausen) steht in `PrefabBuilder.NpcWeapons`.
+
 ## Karten
 
 - **Village** – Dorfplatz mit 16 prozedural zusammengesetzten Häusern aus dem Medieval-Village-Kit,
-  Schießstand entlang der Oststraße, 12 NPCs, Kisten, Munition.
-- **Arena** – ummauerter Hof mit Ecktürmen, Deckungen und Zielreihen.
+  Schießstand entlang der Oststraße, 6 Zivilisten + 6 Soldaten, Kisten, Munition.
+- **Arena** – ummauerter Hof mit Ecktürmen, Deckungen und Zielreihen, 2 Zivilisten + 8 Soldaten.
 
 Beide Szenen werden komplett per Editor-Skript erzeugt (siehe unten) und liegen in `Assets/_Game/Scenes`.
 
@@ -51,7 +68,8 @@ Beide Szenen werden komplett per Editor-Skript erzeugt (siehe unten) und liegen 
 Assets/_Game/Scripts      Laufzeit-Code (GunMan.Runtime)
 Assets/_Game/Editor       Import-Regeln + Content-Builder (GunMan.Editor)
 Assets/_Game/Tests        PlayMode-Smoke-Tests
-Assets/_Game/Prefabs      generierte Prefabs (Player, Waffen, NPC, Ziele, FX)
+Assets/_Game/Prefabs      generierte Prefabs (Player, Waffen, NPC + NPC_<waffe>, Ziele, FX)
+Assets/_Game/Animation    NPC-AnimatorController (Locomotion + Oberkörper-Ebene mit Pistolenposen), AvatarMask
 Assets/_Game/Scenes       generierte Szenen + NavMesh-Daten
 Assets/_Game/Materials    Village-/Waffen-/FX-Materialien
 Assets/ThirdParty         die drei Asset-Packs

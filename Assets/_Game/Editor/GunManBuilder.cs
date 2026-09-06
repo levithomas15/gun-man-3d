@@ -32,7 +32,7 @@ namespace GunMan.EditorTools
             {
                 fxLibrary = fx.fxLibraryPrefab,
                 player = PrefabBuilder.BuildPlayer(weapons),
-                npc = PrefabBuilder.BuildNpc(),
+                npcs = PrefabBuilder.BuildNpcs(weapons),
                 target = PrefabBuilder.BuildTarget(),
                 ammo = PrefabBuilder.BuildAmmoPickup(),
                 crate = PrefabBuilder.BuildCrate(),
@@ -114,12 +114,22 @@ namespace GunMan.EditorTools
                         PreviewRenderer.RenderWithCamera(cam, Path.Combine(dir, $"weapon_{i + 1}_{weaponObjs[i].name}.png"));
                         weaponObjs[i].gameObject.SetActive(false);
                     }
-                    // NPC close-up
-                    var npc = Object.FindAnyObjectByType<NpcCharacter>();
-                    if (npc != null)
+                    // NPC close-ups: one civilian plus every armed variant (weapon in the right hand)
+                    var npcs = Object.FindObjectsByType<NpcCharacter>(FindObjectsSortMode.None);
+                    var shown = new HashSet<string>();
+                    foreach (var npc in npcs)
                     {
+                        string key = npc.weapon != null ? npc.weapon.name : "civilian";
+                        if (!shown.Add(key)) continue;
                         var p = npc.transform.position;
-                        PreviewRenderer.RenderShot(Path.Combine(dir, "npc_closeup.png"), p + new Vector3(2.5f, 1.4f, 2.5f), Quaternion.LookRotation((p + Vector3.up * 0.9f) - (p + new Vector3(2.5f, 1.4f, 2.5f))), 50f);
+                        // pose armed NPCs in the aiming state so the grip can be judged
+                        bool posed = npc.weapon != null && PrefabBuilder.SampleAimPose(npc);
+                        // front-left view (right hand + weapon unobstructed) and a side view
+                        Vector3 camPos = p + npc.transform.forward * 2.0f - npc.transform.right * 1.1f + Vector3.up * 1.45f;
+                        PreviewRenderer.RenderShot(Path.Combine(dir, $"npc_{key}.png"), camPos, Quaternion.LookRotation((p + Vector3.up * 1.15f) - camPos), 40f);
+                        Vector3 sidePos = p + npc.transform.right * 2.2f + npc.transform.forward * 0.6f + Vector3.up * 1.4f;
+                        PreviewRenderer.RenderShot(Path.Combine(dir, $"npc_{key}_side.png"), sidePos, Quaternion.LookRotation((p + Vector3.up * 1.15f + npc.transform.forward * 0.3f) - sidePos), 40f);
+                        if (posed) AnimationMode.StopAnimationMode();
                     }
                     var target = Object.FindAnyObjectByType<PopupTarget>();
                     if (target != null)

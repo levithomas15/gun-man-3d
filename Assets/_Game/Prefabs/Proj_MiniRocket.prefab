@@ -2502,6 +2502,7 @@ MonoBehaviour:
   fuseSeconds: 0
   maxLifetime: 12
   useGravity: 0
+  selfDamageFactor: 0.3
   trail: {fileID: 7157596787595453150}
 --- !u!1 &5340303097742214800
 GameObject:

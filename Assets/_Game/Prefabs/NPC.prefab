@@ -96,6 +96,8 @@ MonoBehaviour:
   maxHealth: 100
   respawnDelay: 5
   applyImpactForceToRigidbody: 0
+  regenPerSecond: 0
+  regenDelay: 5
   onDamaged:
     m_PersistentCalls:
       m_Calls: []
@@ -121,6 +123,15 @@ MonoBehaviour:
   walkSpeed: 1.6
   jogSpeed: 3.2
   idleTimeRange: {x: 1.5, y: 4.5}
+  turnSpeed: 420
+  role: 0
+  weapon: {fileID: 0}
+  huntRange: 150
+  loseTargetAfter: 7
+  preferredRange: 12
+  burstShots: 3
+  burstPauseRange: {x: 0.8, y: 1.7}
+  eyeHeight: 1.6
   animator: {fileID: 1780803184210228638}
   tintRenderers:
   - {fileID: 6816611363815812431}
@@ -131,6 +142,11 @@ MonoBehaviour:
   - {r: 0.9, g: 0.7, b: 0.2, a: 1}
   - {r: 0.6, g: 0.3, b: 0.7, a: 1}
   - {r: 0.9, g: 0.5, b: 0.15, a: 1}
+  soldierPalette:
+  - {r: 0.25, g: 0.25, b: 0.28, a: 1}
+  - {r: 0.35, g: 0.3, b: 0.2, a: 1}
+  - {r: 0.2, g: 0.3, b: 0.25, a: 1}
+  - {r: 0.45, g: 0.15, b: 0.15, a: 1}
 --- !u!1001 &5322193345936394255
 PrefabInstance:
   m_ObjectHideFlags: 0

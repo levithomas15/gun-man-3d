@@ -134,6 +134,7 @@ MonoBehaviour:
   fuseSeconds: 2.6
   maxLifetime: 12
   useGravity: 1
+  selfDamageFactor: 0.3
   trail: {fileID: 0}
 --- !u!1001 &7935239584055570223
 PrefabInstance:

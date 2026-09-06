@@ -60,6 +60,8 @@ namespace GunMan
         bool _burstRunning;
         bool _triggerWasHeld;
         LayerMask _hitMask;
+        Transform _ownerRoot;
+        static readonly RaycastHit[] RayBuffer = new RaycastHit[24];
 
         void Awake()
         {
@@ -73,6 +75,12 @@ namespace GunMan
                 _audio.playOnAwake = false;
             }
             if (muzzle == null) muzzle = transform;
+            if (_ownerRoot == null)
+            {
+                // the character this weapon belongs to (shots ignore its colliders)
+                var owner = GetComponentInParent<Health>();
+                _ownerRoot = owner != null ? owner.transform : transform;
+            }
         }
 
         public void Attach(WeaponHolder holder)
@@ -80,9 +88,45 @@ namespace GunMan
             _holder = holder;
         }
 
+        /// <summary>
+        /// Makes this weapon belong to another character (e.g. an NPC): its colliders are ignored by the
+        /// shots and the given mask replaces the default player mask.
+        /// </summary>
+        public void SetOwner(GameObject owner, LayerMask hitMask)
+        {
+            _ownerRoot = owner != null ? owner.transform : transform;
+            _hitMask = hitMask;
+        }
+
+        /// <summary>Raycast that skips every collider under <paramref name="ignoreRoot"/>.</summary>
+        public static bool RaycastIgnoring(Vector3 origin, Vector3 direction, float range, LayerMask mask, Transform ignoreRoot, out RaycastHit hit)
+        {
+            int n = Physics.RaycastNonAlloc(origin, direction, RayBuffer, range, mask, QueryTriggerInteraction.Ignore);
+            hit = default;
+            float best = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                var h = RayBuffer[i];
+                if (h.distance >= best) continue;
+                if (ignoreRoot != null && h.collider.transform.IsChildOf(ignoreRoot)) continue;
+                best = h.distance;
+                hit = h;
+            }
+            return best < float.MaxValue;
+        }
+
         public void OnEquipped()
         {
             _triggerWasHeld = true; // avoid firing immediately when switching with the trigger held
+            if (muzzleLight != null) muzzleLight.enabled = false;
+        }
+
+        void OnDisable()
+        {
+            // coroutines die with the object: never get stuck in a reload / burst
+            IsReloading = false;
+            ReloadProgress = 0f;
+            _burstRunning = false;
             if (muzzleLight != null) muzzleLight.enabled = false;
         }
 
@@ -140,19 +184,27 @@ namespace GunMan
             _burstRunning = false;
         }
 
+        /// <summary>Fires one shot aimed from the camera centre (player).</summary>
         public void FireOnce(Camera cam)
+        {
+            if (cam != null) Fire(cam.transform.position, cam.transform.forward, cam.transform);
+            else Fire(muzzle.position, muzzle.forward, muzzle);
+        }
+
+        /// <summary>
+        /// Fires one shot from <paramref name="origin"/> along <paramref name="forward"/>.
+        /// Visuals (tracer, flash, projectile) start at the muzzle. Used by the player (camera ray) and NPCs (muzzle ray).
+        /// </summary>
+        public void Fire(Vector3 origin, Vector3 forward, Transform basis)
         {
             AmmoInMag--;
             ShotsFired++;
-
-            // Aim from the camera centre, but spawn visuals at the muzzle.
-            Vector3 origin = cam != null ? cam.transform.position : muzzle.position;
-            Vector3 forward = cam != null ? cam.transform.forward : muzzle.forward;
+            if (basis == null) basis = muzzle;
 
             if (projectilePrefab != null)
             {
                 Vector3 target = origin + forward * range;
-                if (Physics.Raycast(origin, forward, out var aimHit, range, _hitMask, QueryTriggerInteraction.Ignore))
+                if (RaycastIgnoring(origin, forward, range, _hitMask, _ownerRoot, out var aimHit))
                     target = aimHit.point;
                 Vector3 dir = (target - muzzle.position).normalized;
                 dir = (dir + Vector3.up * throwUpwardBias).normalized;
@@ -165,9 +217,9 @@ namespace GunMan
             {
                 for (int p = 0; p < Mathf.Max(1, pellets); p++)
                 {
-                    Vector3 dir = ApplySpread(forward, spreadDegrees, cam != null ? cam.transform : muzzle);
+                    Vector3 dir = ApplySpread(forward, spreadDegrees, basis);
                     Vector3 end = origin + dir * range;
-                    if (Physics.Raycast(origin, dir, out var hit, range, _hitMask, QueryTriggerInteraction.Ignore))
+                    if (RaycastIgnoring(origin, dir, range, _hitMask, _ownerRoot, out var hit))
                     {
                         end = hit.point;
                         var dmg = new DamageInfo
@@ -183,7 +235,8 @@ namespace GunMan
                         var target = hit.collider.GetComponentInParent<IDamageable>();
                         if (target != null) target.TakeDamage(dmg);
                         else if (hit.rigidbody != null) hit.rigidbody.AddForceAtPosition(dir * impactForce, hit.point, ForceMode.Impulse);
-                        FxLibrary.Impact(hit.point, hit.normal, hit.collider, target == null || hit.rigidbody == null);
+                        bool hitCharacter = target is Health th && (th.GetComponent<PlayerController>() != null || th.GetComponent<NpcCharacter>() != null);
+                        FxLibrary.Impact(hit.point, hit.normal, hit.collider, !hitCharacter && (target == null || hit.rigidbody == null));
                         if (target != null) _holder?.RegisterHit(target is Health h && h.IsDead);
                     }
                     if (tracers) FxLibrary.Tracer(muzzle.position, end);
@@ -192,7 +245,7 @@ namespace GunMan
 
             PlayShotSound();
             if (muzzleFlash != null) muzzleFlash.Play(true);
-            if (muzzleLight != null) StartCoroutine(FlashLight());
+            if (muzzleLight != null && gameObject.activeInHierarchy) StartCoroutine(FlashLight());
             _holder?.ApplyRecoil(recoilKick, recoilPitch);
 
             if (AmmoInMag <= 0) TryReload();

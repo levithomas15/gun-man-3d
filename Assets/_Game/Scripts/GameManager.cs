@@ -5,18 +5,20 @@ using UnityEngine.SceneManagement;
 namespace GunMan
 {
     /// <summary>
-    /// Cursor lock, map switching (M / F1..F2), respawn (F5).
+    /// Cursor lock, map switching (M / F1..F2), respawn (F5), combat mode toggle (K).
     /// </summary>
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
         public PlayerController player;
         public bool lockCursorOnStart = true;
+        public CombatDirector combat;
 
         void Awake()
         {
             Instance = this;
             if (player == null) player = FindAnyObjectByType<PlayerController>();
+            if (combat == null) combat = GetComponent<CombatDirector>() ?? FindAnyObjectByType<CombatDirector>() ?? gameObject.AddComponent<CombatDirector>();
         }
 
         void Start()
@@ -44,6 +46,7 @@ namespace GunMan
             if (kb.f1Key.wasPressedThisFrame) LoadMap(0);
             if (kb.f2Key.wasPressedThisFrame) LoadMap(1);
             if (kb.f5Key.wasPressedThisFrame && player != null) player.Respawn();
+            if (kb.kKey.wasPressedThisFrame && combat != null && Cursor.lockState == CursorLockMode.Locked) combat.Toggle();
         }
 
         public static void LoadNextMap()

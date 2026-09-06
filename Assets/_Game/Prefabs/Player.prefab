@@ -351,6 +351,7 @@ GameObject:
   - component: {fileID: 523729657752571657}
   - component: {fileID: 6823658379335823811}
   - component: {fileID: 3044873041431156768}
+  - component: {fileID: 3364098030295868536}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -420,6 +421,33 @@ MonoBehaviour:
   standHeight: 1.8
   crouchHeight: 1.1
   cameraPivot: {fileID: 2290036103063697331}
+  respawnDelay: 3.5
+--- !u!114 &3364098030295868536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8898758741648472659}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 901f9a61997824d1cb0f0194a507ca5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GunMan.Runtime::GunMan.Health
+  maxHealth: 100
+  respawnDelay: -1
+  applyImpactForceToRigidbody: 0
+  regenPerSecond: 6
+  regenDelay: 6
+  onDamaged:
+    m_PersistentCalls:
+      m_Calls: []
+  onDied:
+    m_PersistentCalls:
+      m_Calls: []
+  onRespawned:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &893925907170078778
 PrefabInstance:
   m_ObjectHideFlags: 0

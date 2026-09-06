@@ -29,6 +29,15 @@ Unity 6 (6000.6.0f1) URP First-Person-Shooter-Prototyp. Sprache mit dem Nutzer: 
 - Village-Materialien werden per Name (`MI_*`) in `GunManAssetPostprocessor.OnAssignMaterialModel` zugeordnet;
   Waffen-Materialien liegen extrahiert in `Assets/_Game/Materials/Guns`.
 - Sounds sind synthetisch (`ProceduralAudio`); wenn Audio-Assets dazukommen, `Weapon.PlayShotSound` anpassen.
+- NPC-Waffen hängen am Knochen `hand_r`. Die Griff-Lage wird beim Prefab-Bau berechnet, indem der Clip
+  `Pistol_Aim_Neutral` per `AnimationMode` gesampelt wird (`PrefabBuilder.AttachWeaponToHand`); Feintuning über
+  `NpcWeaponDef.gripRotation/gripOffset`. `Animator.Update` funktioniert im Edit-Modus dafür nicht.
+- Nur ein Gegner greift gleichzeitig an: `CombatDirector` (auf dem GameManager-Objekt) wählt im Kampfmodus (K)
+  den aktiven Gegner, `NpcCharacter` fragt `IsOpponent` ab. Ohne Kampfmodus schießt kein NPC.
+- Waffen-Raycasts ignorieren den Besitzer über `Weapon.RaycastIgnoring(..., ownerTransform)` mit `IsChildOf` –
+  nicht `transform.root` verwenden, alle Gameplay-Objekte hängen unter `Gameplay`.
+- Editor-Log des per Hub gestarteten Editors liegt in `Logs/Editor.log` im Projekt (nicht `~/Library/Logs/Unity`).
+  `capture_game_view --save_path` darf kein `..` enthalten. Vor `menu`-Builds Play-Modus mit `editor_stop` beenden.
 
 ## Offen / Ideen
 

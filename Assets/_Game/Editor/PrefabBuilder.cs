@@ -283,6 +283,12 @@ namespace GunMan.EditorTools
             cc.slopeLimit = 50f;
             cc.stepOffset = 0.4f;
             var pc = root.AddComponent<PlayerController>();
+            var health = root.AddComponent<Health>();
+            health.maxHealth = 100f;
+            health.respawnDelay = -1f;           // PlayerController handles death + respawn
+            health.applyImpactForceToRigidbody = false;
+            health.regenPerSecond = 6f;
+            health.regenDelay = 6f;
 
             var pivot = new GameObject("CameraPivot");
             pivot.transform.SetParent(root.transform, false);
@@ -323,12 +329,43 @@ namespace GunMan.EditorTools
 
         // ------------------------------------------------------------------ npc
 
-        public static GameObject BuildNpc()
+        /// <summary>How an NPC uses a weapon from the weapon table (tuned to be beatable).</summary>
+        public class NpcWeaponDef
+        {
+            public string file;
+            public float preferredRange = 12f, spread = 4f, damageFactor = 0.5f;
+            public int burst = 3;
+            public Vector2 pause = new Vector2(0.9f, 1.8f);
+            /// <summary>Extra rotation (degrees) of the weapon around the hand's grip axes, tuned per model.</summary>
+            public Vector3 gripRotation = Vector3.zero;
+            public Vector3 gripOffset = Vector3.zero;
+        }
+
+        public static readonly NpcWeaponDef[] NpcWeapons =
+        {
+            new NpcWeaponDef { file = "pew", preferredRange = 10f, spread = 3.5f, damageFactor = 0.45f, burst = 2, pause = new Vector2(1.0f, 1.8f) },
+            new NpcWeaponDef { file = "mac10", preferredRange = 8f, spread = 6.5f, damageFactor = 0.35f, burst = 6, pause = new Vector2(1.4f, 2.4f) },
+            new NpcWeaponDef { file = "ak47", preferredRange = 15f, spread = 4.5f, damageFactor = 0.35f, burst = 3, pause = new Vector2(1.2f, 2.2f) },
+            new NpcWeaponDef { file = "shotgun", preferredRange = 6f, spread = 6f, damageFactor = 0.25f, burst = 1, pause = new Vector2(2.0f, 3.0f) },
+            new NpcWeaponDef { file = "awp", preferredRange = 28f, spread = 1.2f, damageFactor = 0.3f, burst = 1, pause = new Vector2(3.0f, 4.5f) },
+        };
+
+        public class NpcPrefabs
+        {
+            public GameObject unarmed;
+            public List<GameObject> armed = new List<GameObject>();
+        }
+
+        static AnimatorController BuildNpcAnimator()
         {
             GunManBootstrap.EnsureFolder(BuildUtil.AnimDir);
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(BuildUtil.UalFbx);
             var clips = AssetDatabase.LoadAllAssetRepresentationsAtPath(BuildUtil.UalFbx).OfType<AnimationClip>().ToDictionary(c => c.name, c => c);
-            AnimationClip Clip(string n) => clips.TryGetValue(n, out var c) ? c : null;
+            AnimationClip Clip(string n)
+            {
+                if (clips.TryGetValue(n, out var c)) return c;
+                Debug.LogWarning($"[GunMan] animation clip {n} missing");
+                return null;
+            }
 
             string ctrlPath = $"{BuildUtil.AnimDir}/NpcController.controller";
             AssetDatabase.DeleteAsset(ctrlPath);
@@ -337,6 +374,9 @@ namespace GunMan.EditorTools
             ctrl.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Die", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Revive", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("Aiming", AnimatorControllerParameterType.Bool);
+            ctrl.AddParameter("Shoot", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("Reload", AnimatorControllerParameterType.Trigger);
             var sm = ctrl.layers[0].stateMachine;
 
             var locomotion = ctrl.CreateBlendTreeInController("Locomotion", out var tree);
@@ -372,8 +412,96 @@ namespace GunMan.EditorTools
             revive.hasExitTime = false;
             revive.duration = 0.1f;
 
-            // Prefab
-            var root = new GameObject("NPC");
+            // ---- upper body layer: pistol poses for armed NPCs (weight is set at runtime)
+            string maskPath = $"{BuildUtil.AnimDir}/UpperBody.mask";
+            AssetDatabase.DeleteAsset(maskPath);
+            var mask = new AvatarMask();
+            for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++) mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
+            foreach (var part in new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.Head, AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm, AvatarMaskBodyPart.LeftFingers, AvatarMaskBodyPart.RightFingers })
+                mask.SetHumanoidBodyPartActive(part, true);
+            AssetDatabase.CreateAsset(mask, maskPath);
+
+            var armsSm = new AnimatorStateMachine { name = "Arms", hideFlags = HideFlags.HideInHierarchy };
+            AssetDatabase.AddObjectToAsset(armsSm, ctrl);
+            var armsLayer = new AnimatorControllerLayer
+            {
+                name = "Arms",
+                avatarMask = mask,
+                defaultWeight = 0f,
+                blendingMode = AnimatorLayerBlendingMode.Override,
+                stateMachine = armsSm,
+            };
+            ctrl.AddLayer(armsLayer);
+
+            var relaxed = armsSm.AddState("PistolIdle");
+            relaxed.motion = Clip("Pistol_Idle_Loop");
+            var aim = armsSm.AddState("PistolAim");
+            aim.motion = Clip("Pistol_Aim_Neutral");
+            armsSm.defaultState = relaxed;
+            var toAim = relaxed.AddTransition(aim);
+            toAim.AddCondition(AnimatorConditionMode.If, 0f, "Aiming");
+            toAim.hasExitTime = false;
+            toAim.duration = 0.2f;
+            var toRelaxed = aim.AddTransition(relaxed);
+            toRelaxed.AddCondition(AnimatorConditionMode.IfNot, 0f, "Aiming");
+            toRelaxed.hasExitTime = false;
+            toRelaxed.duration = 0.3f;
+
+            var shoot = armsSm.AddState("PistolShoot");
+            shoot.motion = Clip("Pistol_Shoot");
+            var toShoot = armsSm.AddAnyStateTransition(shoot);
+            toShoot.AddCondition(AnimatorConditionMode.If, 0f, "Shoot");
+            toShoot.canTransitionToSelf = true;
+            toShoot.duration = 0.03f;
+            toShoot.hasExitTime = false;
+            var shootBack = shoot.AddTransition(aim);
+            shootBack.hasExitTime = true;
+            shootBack.exitTime = 0.6f;
+            shootBack.duration = 0.1f;
+
+            var reload = armsSm.AddState("PistolReload");
+            reload.motion = Clip("Pistol_Reload");
+            var toReload = armsSm.AddAnyStateTransition(reload);
+            toReload.AddCondition(AnimatorConditionMode.If, 0f, "Reload");
+            toReload.canTransitionToSelf = false;
+            toReload.duration = 0.1f;
+            toReload.hasExitTime = false;
+            var reloadBack = reload.AddTransition(aim);
+            reloadBack.hasExitTime = true;
+            reloadBack.exitTime = 0.9f;
+            reloadBack.duration = 0.15f;
+
+            EditorUtility.SetDirty(ctrl);
+            return ctrl;
+        }
+
+        /// <summary>Builds the unarmed NPC prefab plus one armed variant per <see cref="NpcWeapons"/> entry.</summary>
+        public static AnimationClip LoadUalClip(string name) =>
+            AssetDatabase.LoadAllAssetRepresentationsAtPath(BuildUtil.UalFbx).OfType<AnimationClip>().FirstOrDefault(c => c.name == name);
+
+        public static NpcPrefabs BuildNpcs(List<GameObject> weaponPrefabs)
+        {
+            var ctrl = BuildNpcAnimator();
+            var result = new NpcPrefabs { unarmed = BuildNpc(ctrl, null, null) };
+            foreach (var def in NpcWeapons)
+            {
+                var weapon = weaponPrefabs.FirstOrDefault(w => w.name == $"W_{def.file}");
+                if (weapon == null)
+                {
+                    Debug.LogWarning($"[GunMan] NPC weapon W_{def.file} not found");
+                    continue;
+                }
+                result.armed.Add(BuildNpc(ctrl, weapon, def));
+            }
+            return result;
+        }
+
+        static GameObject BuildNpc(AnimatorController ctrl, GameObject weaponPrefab, NpcWeaponDef weaponDef)
+        {
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(BuildUtil.UalFbx);
+            string prefabName = weaponPrefab != null ? $"NPC_{weaponDef.file}" : "NPC";
+
+            var root = new GameObject(prefabName);
             var col = root.AddComponent<CapsuleCollider>();
             col.height = 1.8f;
             col.radius = 0.32f;
@@ -393,7 +521,6 @@ namespace GunMan.EditorTools
             inst.transform.localPosition = Vector3.zero;
             var b = BuildUtil.WorldBounds(inst);
             float h = b.size.y;
-            Debug.Log($"[GunMan] NPC model asset rotation={model.transform.rotation.eulerAngles} scale={model.transform.localScale} bounds={b.size}");
             if (h > 0.01f && (h < 1.4f || h > 2.3f))
             {
                 float s = 1.8f / h;
@@ -413,7 +540,118 @@ namespace GunMan.EditorTools
             foreach (var r in npc.tintRenderers)
                 if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
 
-            return BuildUtil.SavePrefab(root, "NPC");
+            if (weaponPrefab != null)
+            {
+                var weapon = AttachWeaponToHand(inst, weaponPrefab, weaponDef, LoadUalClip("Pistol_Aim_Neutral"));
+                npc.weapon = weapon;
+                npc.role = NpcRole.Soldier;
+                npc.preferredRange = weaponDef.preferredRange;
+                npc.burstShots = weaponDef.burst;
+                npc.burstPauseRange = weaponDef.pause;
+                health.respawnDelay = 12f;
+            }
+
+            return BuildUtil.SavePrefab(root, prefabName);
+        }
+
+        /// <summary>
+        /// Parents a weapon prefab to the right hand bone. The model is posed with the aiming clip (edit-mode sampling),
+        /// the weapon is aligned with the character's forward axis / world up in that pose and placed in the palm;
+        /// the resulting hand-local offset is what gets saved. Falls back to a bind-pose heuristic if sampling fails.
+        /// </summary>
+        static Weapon AttachWeaponToHand(GameObject model, GameObject weaponPrefab, NpcWeaponDef def, AnimationClip aimClip)
+        {
+            var bones = model.GetComponentsInChildren<Transform>(true);
+            Transform Bone(string n) => bones.FirstOrDefault(t => t.name == n);
+            var hand = Bone("hand_r");
+            var middle = Bone("middle_01_r") ?? Bone("index_01_r");
+            var index = Bone("index_01_r");
+            var pinky = Bone("pinky_01_r");
+            if (hand == null)
+            {
+                Debug.LogWarning("[GunMan] hand_r bone not found, weapon attached to model root");
+                hand = model.transform;
+            }
+
+            Vector3 bindHandPos = hand.position;
+            bool sampled = false;
+            if (aimClip != null && model.GetComponent<Animator>() != null)
+            {
+                try
+                {
+                    AnimationMode.StartAnimationMode();
+                    AnimationMode.BeginSampling();
+                    AnimationMode.SampleAnimationClip(model, aimClip, Mathf.Min(0.2f, aimClip.length * 0.5f));
+                    AnimationMode.EndSampling();
+                    sampled = Vector3.Distance(bindHandPos, hand.position) > 0.05f;
+                    if (!sampled) Debug.LogWarning($"[GunMan] aim clip sampling did not move hand_r ({bindHandPos} -> {hand.position})");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[GunMan] aim clip sampling failed: {e.Message}");
+                }
+            }
+
+            Vector3 fingers = middle != null ? (middle.position - hand.position).normalized : hand.up;
+            Vector3 palm = index != null && pinky != null
+                ? Vector3.Cross((pinky.position - hand.position).normalized, (index.position - hand.position).normalized).normalized
+                : -hand.forward;
+
+            Quaternion worldRot;
+            if (sampled)
+            {
+                // aiming pose: barrel along the character's view direction, top up
+                worldRot = Quaternion.LookRotation(model.transform.forward, Vector3.up);
+            }
+            else
+            {
+                // bind pose (T-pose, palm down): barrel along the metacarpals, top towards the thumb side
+                Vector3 up = Vector3.Cross(fingers, -palm).normalized;
+                worldRot = Quaternion.LookRotation(fingers, up);
+            }
+            worldRot *= Quaternion.Euler(def.gripRotation);
+            Vector3 worldPos = hand.position + fingers * 0.05f + palm * 0.03f + worldRot * def.gripOffset;
+
+            // hand-local placement (valid in every pose since the weapon is a child of the bone)
+            Vector3 localPos = hand.InverseTransformPoint(worldPos);
+            Quaternion localRot = Quaternion.Inverse(hand.rotation) * worldRot;
+            var ls = hand.lossyScale;
+            Debug.Log($"[GunMan] NPC weapon {weaponPrefab.name}: sampled={sampled} fingers={fingers} palm={palm} localPos={localPos} localRot={localRot.eulerAngles}");
+
+            if (AnimationMode.InAnimationMode()) AnimationMode.StopAnimationMode();
+
+            var inst = BuildUtil.Instantiate(weaponPrefab, hand);
+            inst.name = weaponPrefab.name;
+            inst.transform.localScale = new Vector3(1f / ls.x, 1f / ls.y, 1f / ls.z);
+            inst.transform.localRotation = localRot;
+            inst.transform.localPosition = localPos;
+
+            var weapon = inst.GetComponent<Weapon>();
+            weapon.damage *= def.damageFactor;
+            weapon.spreadDegrees = def.spread;
+            weapon.infiniteReserve = true;
+            weapon.zoomFov = 0f;
+            var audio = inst.GetComponent<AudioSource>();
+            if (audio != null)
+            {
+                audio.spatialBlend = 1f;
+                audio.minDistance = 3f;
+                audio.maxDistance = 70f;
+                audio.rolloffMode = AudioRolloffMode.Linear;
+            }
+            return weapon;
+        }
+
+        /// <summary>Poses a scene NPC with the aiming clip for previews. Call <see cref="AnimationMode.StopAnimationMode"/> afterwards.</summary>
+        public static bool SampleAimPose(NpcCharacter npc)
+        {
+            var clip = LoadUalClip("Pistol_Aim_Neutral");
+            if (npc == null || npc.animator == null || clip == null) return false;
+            if (!AnimationMode.InAnimationMode()) AnimationMode.StartAnimationMode();
+            AnimationMode.BeginSampling();
+            AnimationMode.SampleAnimationClip(npc.animator.gameObject, clip, Mathf.Min(0.2f, clip.length * 0.5f));
+            AnimationMode.EndSampling();
+            return true;
         }
 
         // ------------------------------------------------------------------ target
