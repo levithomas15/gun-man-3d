@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6359766109404011707
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6764820713166500555}
+  - component: {fileID: 1304789065418875265}
+  m_Layer: 0
+  m_Name: FxLibrary
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6764820713166500555
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6359766109404011707}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1304789065418875265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6359766109404011707}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f1480b148b61486191f8d81a1a36c09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GunMan.Runtime::GunMan.FxLibrary
+  impactPrefab: {fileID: 2488320933883775104, guid: 918efb21b686a4405aac70e68744dd33, type: 3}
+  explosionPrefab: {fileID: 7841715962935392826, guid: de660e7bc29024b228427e05e7c2f31f, type: 3}
+  bulletHolePrefab: {fileID: 8246232345568925892, guid: 27a0f224b74674e5a8911511da25c026, type: 3}
+  tracerMaterial: {fileID: 2100000, guid: 0e3c156558c93433898608221e0a33de, type: 2}
+  bulletHoleLifetime: 25

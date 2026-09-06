@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "unity-editor-mcp": {
+      "type": "stdio",
+      "command": "/Users/patrick.thomas/.unity/bin/unity",
+      "args": ["mcp", "--project-path", "/Users/patrick.thomas/dev/_privat/gun-man-3d"],
+      "env": {}
+    }
+  }
+}
