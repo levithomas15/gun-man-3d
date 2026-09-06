@@ -352,6 +352,7 @@ GameObject:
   - component: {fileID: 6823658379335823811}
   - component: {fileID: 3044873041431156768}
   - component: {fileID: 3364098030295868536}
+  - component: {fileID: 7128551683418613623}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -448,6 +449,113 @@ MonoBehaviour:
   onRespawned:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7128551683418613623
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8898758741648472659}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 939e9d1a3921f4a688baba656d6f0bda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GunMan.Runtime::GunMan.BuildSystem
+  player: {fileID: 3044873041431156768}
+  holder: {fileID: 2039236799576691143}
+  cam: {fileID: 8068756819450530761}
+  woodMaterials:
+  - {fileID: 2100000, guid: 4799df3e1fe4843539c0098d762518da, type: 2}
+  - {fileID: 2100000, guid: abf4dcef8ab594834971d6a77fa6f94b, type: 2}
+  - {fileID: 2100000, guid: 955ce7605cbfb47b9b401f84676826a1, type: 2}
+  - {fileID: 2100000, guid: 24db77d83cb5641db8d714c97e50ff46, type: 2}
+  - {fileID: 2100000, guid: 0feedbb69071e4a0397b0e01be52d229, type: 2}
+  - {fileID: 2100000, guid: c82264db45e4a487eac2fc818d4d430f, type: 2}
+  - {fileID: 2100000, guid: 3a5acd1d9d37747eba32d3aeae35b1d4, type: 2}
+  - {fileID: 2100000, guid: 664ca6e16c75b4e12b50b8ad0797d0b6, type: 2}
+  - {fileID: 2100000, guid: bd9fb33b6dec64ca4940a999587bc869, type: 2}
+  - {fileID: 2100000, guid: 38ce7855cde2e46b7b238560113a3ee0, type: 2}
+  - {fileID: 2100000, guid: 5817cabc2521a4272af93b38172aef2a, type: 2}
+  - {fileID: 2100000, guid: 7e6a911b326024b59ad49efcbfc29499, type: 2}
+  - {fileID: 2100000, guid: 92d0178a332d340f9bdaff8dbe2d7924, type: 2}
+  - {fileID: 2100000, guid: 7c1be52ddb6fd446cbe56bbd567c52b9, type: 2}
+  - {fileID: 2100000, guid: 92465fd8b095d4e92aaf1a025c7ec1a1, type: 2}
+  - {fileID: 2100000, guid: 1d3c3abf2db3f4d6f945f32b048b6fbf, type: 2}
+  - {fileID: 2100000, guid: beed507c6bb2b455797d100e79a15c84, type: 2}
+  - {fileID: 2100000, guid: 2773ec3ad53fc44b689f3eb3b1800998, type: 2}
+  - {fileID: 2100000, guid: c5e2ec73ec9c040559bab84032a4f394, type: 2}
+  - {fileID: 2100000, guid: 1b350858598ef4241bc733159b065491, type: 2}
+  - {fileID: 2100000, guid: 9077979a9ab8e4766962eafda3582c5d, type: 2}
+  - {fileID: 2100000, guid: 33837198b8b89426eb4d724a4270447a, type: 2}
+  - {fileID: 2100000, guid: 7b350290cb48f40bba41964f8a6a1ce7, type: 2}
+  - {fileID: 2100000, guid: 5e962a793b42541849b2dccd63aa084f, type: 2}
+  - {fileID: 2100000, guid: 38efc043ffc234c18b765215ded11f39, type: 2}
+  - {fileID: 2100000, guid: cf3cccaed4eea43858290f349c73b0e5, type: 2}
+  - {fileID: 2100000, guid: 27e61a3f41757448eb1494e67d03bbc0, type: 2}
+  - {fileID: 2100000, guid: ff09bb1dc57ef4104ba6eac32df4fd36, type: 2}
+  - {fileID: 2100000, guid: fcbc6228ff9884fb0a58ed8d9e839ff3, type: 2}
+  - {fileID: 2100000, guid: b9f0c0587f1a84c0db9bccdd389232e7, type: 2}
+  - {fileID: 2100000, guid: f9b642f638d6043c394f5e48a955a796, type: 2}
+  - {fileID: 2100000, guid: e498070778d504a6991c8fee07822025, type: 2}
+  - {fileID: 2100000, guid: d2d429c307b894c038ccf598684e8d09, type: 2}
+  - {fileID: 2100000, guid: a0c82d4a377f8468fa685b169bcc6567, type: 2}
+  - {fileID: 2100000, guid: 65f885b0acbab44c5ae59d2f16c957d9, type: 2}
+  - {fileID: 2100000, guid: 70482dbeea5a44355b82d7b3b9d12dbb, type: 2}
+  - {fileID: 2100000, guid: f044faa5d1c874cf787d8f26cc9506b2, type: 2}
+  - {fileID: 2100000, guid: f846fd579931b4d7eb226736461f0739, type: 2}
+  - {fileID: 2100000, guid: b2aef10998e154886997f22d2baeb778, type: 2}
+  - {fileID: 2100000, guid: f1bfb0a2d5d1648eeae8cfe4f95f5289, type: 2}
+  woodNames:
+  - WoodFloor_05
+  - WoodFloor_06
+  - WoodFloor_08
+  - WoodFloor_09
+  - WoodFloor_10
+  - WoodPlanks_01
+  - WoodPlanks_10
+  - WoodPlanks_11
+  - WoodPlanks_12
+  - WoodPlanks_13
+  - WoodPlanks_40
+  - WoodPlanks_41
+  - WoodPlanks_42
+  - WoodPlanks_43
+  - WoodPlanks_44
+  - WoodPlanks_45
+  - WoodPlanks_46
+  - WoodPlanks_47
+  - WoodPlanks_48
+  - WoodPlanks_49
+  - WoodPlanks_50
+  - WoodPlanks_51
+  - WoodPlanks_52
+  - WoodPlanks_53
+  - WoodPlanks_54
+  - WoodPlanks_55
+  - WoodPlanks_56
+  - WoodPlanks_57
+  - WoodPlanks_58
+  - WoodPlanks_59
+  - WoodPlanks_60
+  - WoodPlanks_61
+  - WoodPlanks_62
+  - WoodPlanks_63
+  - WoodPlanks_64
+  - WoodPlanks_65
+  - WoodPlanks_66
+  - WoodPlanks_67
+  - WoodPlanks_68
+  - WoodPlanks_69
+  defaultMaterialIndex: 6
+  ghostValidMaterial: {fileID: 2100000, guid: b04f594c4da67404394dc940e8b7ba0f, type: 2}
+  ghostInvalidMaterial: {fileID: 2100000, guid: 485c0a1687e4a49c8b1621bc3cf8f35a, type: 2}
+  editPresentMaterial: {fileID: 2100000, guid: b263641a0b47243358d5f769993b2d5f, type: 2}
+  editRemovedMaterial: {fileID: 2100000, guid: dd6a459e0f8264fb7b67943f58a59e7b, type: 2}
+  editHoverMaterial: {fileID: 2100000, guid: 72499ad27f1724f9189fa1735e8976c4, type: 2}
+  placeDistance: 3.5
+  reach: 12
+  pieceHealth: 150
+  minLevel: 0
 --- !u!1001 &893925907170078778
 PrefabInstance:
   m_ObjectHideFlags: 0

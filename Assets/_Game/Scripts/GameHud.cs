@@ -5,12 +5,13 @@ using UnityEngine.SceneManagement;
 namespace GunMan
 {
     /// <summary>
-    /// Minimal IMGUI HUD: crosshair, weapon + ammo, health bar, hit indicator, death overlay, enemy counter, key hints.
+    /// Minimal IMGUI HUD: crosshair, weapon + ammo, health bar, hit indicator, death overlay, enemy counter, build panel, key hints.
     /// </summary>
     public class GameHud : MonoBehaviour
     {
         public WeaponHolder holder;
         public PlayerController player;
+        public BuildSystem build;
         public Color crosshairColor = new Color(1f, 1f, 1f, 0.9f);
         public Color healthGood = new Color(0.35f, 0.85f, 0.4f);
         public Color healthBad = new Color(0.9f, 0.2f, 0.15f);
@@ -26,6 +27,7 @@ namespace GunMan
         {
             if (holder == null) holder = FindAnyObjectByType<WeaponHolder>();
             if (player == null) player = holder != null ? holder.GetComponentInParent<PlayerController>() : FindAnyObjectByType<PlayerController>();
+            if (build == null) build = player != null ? player.GetComponent<BuildSystem>() : FindAnyObjectByType<BuildSystem>();
             _white = new Texture2D(1, 1);
             _white.SetPixel(0, 0, Color.white);
             _white.Apply();
@@ -64,13 +66,14 @@ namespace GunMan
 
             // ---- crosshair ----
             var weapon = holder != null ? holder.Current : null;
-            bool aiming = holder != null && holder.IsAiming;
+            bool building = build != null && build.BuildMode;
+            bool aiming = holder != null && holder.IsAiming && !building;
             if (!dead && !aiming)
             {
-                float gap = 6f + (weapon != null ? weapon.spreadDegrees * 4f : 0f);
+                float gap = 6f + (weapon != null && !building ? weapon.spreadDegrees * 4f : 0f);
                 float len = 10f, thick = 2f;
                 var c = GUI.color;
-                GUI.color = crosshairColor;
+                GUI.color = building && !build.EditMode ? (build.GhostValid ? new Color(0.4f, 1f, 0.5f, 0.95f) : new Color(1f, 0.35f, 0.3f, 0.95f)) : crosshairColor;
                 GUI.DrawTexture(new Rect(w / 2 - thick / 2, h / 2 - gap - len, thick, len), _white);
                 GUI.DrawTexture(new Rect(w / 2 - thick / 2, h / 2 + gap, thick, len), _white);
                 GUI.DrawTexture(new Rect(w / 2 - gap - len, h / 2 - thick / 2, len, thick), _white);
@@ -94,8 +97,10 @@ namespace GunMan
                 GUI.color = c;
             }
 
+            if (building && !dead) DrawBuildPanel(w, h);
+
             // ---- weapon / ammo ----
-            if (weapon != null && !dead)
+            if (weapon != null && !dead && !building)
             {
                 string ammo = weapon.IsReloading
                     ? $"Nachladen… {Mathf.RoundToInt(weapon.ReloadProgress * 100)}%"
@@ -165,11 +170,12 @@ namespace GunMan
                   "RMB zoomen (Sniper) · 1-9 / Mausrad Waffe · Q letzte\n" +
                   "M / F1 / F2 Karte · F5 Respawn · Esc Maus freigeben\n" +
                   "K Kampfmodus: ein Gegner (dunkel gekleidet) greift an\n" +
+                  "B Baumodus (Holz): 1-5 Teil · R drehen · LMB bauen · G bearbeiten · X abreißen · T Textur\n" +
                   "Roter Pfeil = Trefferrichtung · H Hilfe ein/aus"
                 : $"Karte: {scene} · H Hilfe";
             var hintStyle = new GUIStyle(_hint);
             hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.75f * Mathf.Max(hintAlpha, 0.6f));
-            GUI.Label(new Rect(12, 10, 440, 150), hints, hintStyle);
+            GUI.Label(new Rect(12, 10, 520, 170), hints, hintStyle);
 
             if (dead)
             {
@@ -186,6 +192,63 @@ namespace GunMan
             {
                 var center = new GUIStyle(_big) { alignment = TextAnchor.MiddleCenter, fontSize = 22 };
                 GUI.Label(new Rect(0, h * 0.6f, w, 40), "Klicken, um weiterzuspielen", center);
+            }
+        }
+
+        void DrawBuildPanel(float w, float h)
+        {
+            var accent = new Color(1f, 0.85f, 0.3f);
+            var title = new GUIStyle(_big) { fontSize = 26 };
+            title.normal.textColor = accent;
+            string mode = build.EditMode ? $"Bearbeiten · {BuildGrid.DisplayName(build.Editing.Type)}" : $"Bauen · {BuildGrid.DisplayName(build.SelectedType)}";
+            GUI.Label(new Rect(w - 520, h - 118, 500, 36), mode, title);
+
+            string wood = $"Holz {build.MaterialIndex + 1}/{build.MaterialCount} · {build.MaterialName}";
+            GUI.Label(new Rect(w - 520, h - 82, 500, 26), wood, _small);
+
+            string keys = build.EditMode
+                ? (build.Editing.SubCellCount > 0 ? "LMB Feld an/aus · R drehen · T Holz · X abreißen · G fertig" : "R drehen · T Holz · X abreißen · G fertig")
+                : "LMB bauen · R drehen · G bearbeiten · X abreißen · T Holz · B Waffen";
+            var keyStyle = new GUIStyle(_small) { fontSize = 13 };
+            keyStyle.normal.textColor = new Color(1f, 1f, 1f, 0.65f);
+            GUI.Label(new Rect(w - 520, h - 56, 500, 22), keys, keyStyle);
+
+            // piece slots
+            var slotStyle = new GUIStyle(_small) { alignment = TextAnchor.LowerRight, fontSize = 13 };
+            float slotW = 84f;
+            float x = w - 20 - slotW * BuildGrid.AllTypes.Length;
+            for (int i = 0; i < BuildGrid.AllTypes.Length; i++)
+            {
+                var t = BuildGrid.AllTypes[i];
+                bool active = !build.EditMode && t == build.SelectedType;
+                slotStyle.normal.textColor = active ? accent : new Color(1f, 1f, 1f, 0.45f);
+                GUI.Label(new Rect(x, h - 26, slotW - 6, 22), $"{i + 1} {BuildGrid.DisplayName(t)}", slotStyle);
+                x += slotW;
+            }
+
+            // what the crosshair points at
+            var target = build.EditMode ? build.Editing : build.Target;
+            if (target != null && target.Health != null)
+            {
+                var info = new GUIStyle(_center) { fontSize = 15, fontStyle = FontStyle.Normal };
+                info.normal.textColor = new Color(1f, 1f, 1f, 0.8f);
+                string sub = build.EditMode && build.HoverSubCell >= 0 ? $" · Feld {build.HoverSubCell + 1}" + (build.Editing.IsSubCellRemoved(build.HoverSubCell) ? " (offen)" : "") : "";
+                GUI.Label(new Rect(0, h / 2 + 26, w, 24), $"{BuildGrid.DisplayName(target.Type)} {Mathf.CeilToInt(target.Health.Current)}/{Mathf.CeilToInt(target.Health.maxHealth)}{sub}", info);
+            }
+            else if (!build.EditMode && !build.GhostValid && !string.IsNullOrEmpty(build.GhostReason))
+            {
+                var info = new GUIStyle(_center) { fontSize = 15, fontStyle = FontStyle.Normal };
+                info.normal.textColor = new Color(1f, 0.45f, 0.4f, 0.9f);
+                GUI.Label(new Rect(0, h / 2 + 26, w, 24), build.GhostReason, info);
+            }
+
+            // announcements
+            if (Time.time - build.MessageTime < 2.5f && !string.IsNullOrEmpty(build.Message))
+            {
+                float a = Mathf.Clamp01((2.5f - (Time.time - build.MessageTime)) / 0.5f);
+                var msg = new GUIStyle(_center) { fontSize = 20, fontStyle = FontStyle.Normal };
+                msg.normal.textColor = new Color(1f, 0.9f, 0.5f, a);
+                GUI.Label(new Rect(0, h * 0.26f, w, 30), build.Message, msg);
             }
         }
 

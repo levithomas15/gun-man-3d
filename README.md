@@ -2,7 +2,7 @@
 
 First-Person-Shooter-Prototyp in **Unity 6 (6000.6.0f1, URP)**.
 Zwei Karten, neun Waffen, animierte NPCs (Zivilisten und bewaffnete Soldaten), umschaltbarer Kampfmodus,
-Schießstand-Ziele, Munitionskisten.
+Schießstand-Ziele, Munitionskisten und ein Fortnite-artiges Bausystem aus Holz.
 
 ## Steuerung
 
@@ -19,6 +19,7 @@ Schießstand-Ziele, Munitionskisten.
 | 1–9, Mausrad, Q | Waffe wechseln / letzte Waffe |
 | M, F1, F2 | Karte wechseln |
 | K | Kampfmodus an/aus |
+| B | Baumodus an/aus (Waffen werden weggesteckt) |
 | F5 | Respawn |
 | H | Tastenhinweise ein-/ausblenden |
 | Esc | Maus freigeben (Klick sperrt sie wieder) |
@@ -46,6 +47,28 @@ Physik-Impuls und Kamerawackeln. Alle Sounds werden zur Laufzeit synthetisiert
   mit vollem Leben und voller Munition. Eigene Explosionen richten nur 30 % Schaden an einem selbst an.
 - Balance der NPC-Waffen (Schaden, Streuung, Salven, Pausen) steht in `PrefabBuilder.NpcWeapons`.
 
+## Bauen (B)
+
+Wie in Fortnite, nur mit Holz. Im Baumodus wählt man mit **1–5** (oder Mausrad) das Teil, ein grüner Geist
+zeigt, wo es hinkommt, **LMB** setzt es. Alles rastet auf ein 4 m-Raster (4 m Geschosshöhe):
+
+| Taste | Baumodus | Bearbeiten (G auf ein Teil) |
+|---|---|---|
+| 1 / 2 / 3 / 4 / 5 | Wand / Boden / Decke / Treppe / Dach | – |
+| R | drehen (Wand quer, Treppenrichtung) | Teil drehen (Wand spiegeln) |
+| LMB | bauen | Feld an/aus (Wand 3×3, Boden/Decke/Dach 2×2) |
+| G | Teil unterm Fadenkreuz bearbeiten | fertig |
+| X | Teil abreißen | Teil abreißen |
+| T / Shift+T | nächste / vorherige Holztextur (40 Stück) | Textur des Teils ändern |
+
+- **Wand** 3×3 Felder: unten Mitte + Mitte entfernen = Tür, nur Mitte = Fenster, obere Reihe weg = halbe Wand.
+- **Boden/Decke** sind dieselbe Platte (Decke = Boden des Geschosses darüber), 2×2 Viertel editierbar.
+- **Treppe** steigt vom Spieler weg ein Geschoss hoch (Rampe-Collider, begehbar), **Dach** ist eine Pyramide
+  in vier Vierteln.
+- Ein Boden unter den eigenen Füßen hebt einen hoch; Wände/Treppen/Dächer durch den Spieler sind gesperrt (roter Geist).
+- Holz hat **150 Lebenspunkte** und lässt sich mit jeder Waffe zerschießen (Splitter fliegen); NPCs laufen
+  um Bauteile herum. Texturen liegen in `Assets/_Game/Textures/Wood`, die Materialien werden vom Builder erzeugt.
+
 ## Karten
 
 - **Village** – Dorfplatz mit 16 prozedural zusammengesetzten Häusern aus dem Medieval-Village-Kit,
@@ -71,7 +94,8 @@ Assets/_Game/Tests        PlayMode-Smoke-Tests
 Assets/_Game/Prefabs      generierte Prefabs (Player, Waffen, NPC + NPC_<waffe>, Ziele, FX)
 Assets/_Game/Animation    NPC-AnimatorController (Locomotion + Oberkörper-Ebene mit Pistolenposen), AvatarMask
 Assets/_Game/Scenes       generierte Szenen + NavMesh-Daten
-Assets/_Game/Materials    Village-/Waffen-/FX-Materialien
+Assets/_Game/Materials    Village-/Waffen-/FX-/Bau-Materialien (Build = 40 Holz + Geist/Editier-Overlays)
+Assets/_Game/Textures     Holztexturen des Bausystems (40 Free Wood Textures, 512², kachelbar)
 Assets/ThirdParty         die drei Asset-Packs
 ```
 
