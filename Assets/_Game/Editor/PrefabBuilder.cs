@@ -305,7 +305,7 @@ namespace GunMan.EditorTools
 
             var holderGo = new GameObject("WeaponHolder");
             holderGo.transform.SetParent(camGo.transform, false);
-            holderGo.transform.localPosition = new Vector3(0.24f, -0.22f, 0.42f);
+            holderGo.transform.localPosition = new Vector3(0.22f, -0.16f, 0.40f);
             var holder = holderGo.AddComponent<WeaponHolder>();
             holder.playerCamera = cam;
             holder.player = pc;

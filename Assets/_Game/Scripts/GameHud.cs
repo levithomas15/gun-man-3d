@@ -81,14 +81,15 @@ namespace GunMan
                 GUI.Label(new Rect(w - 420, h - 50, 400, 30), ammo, _small);
 
                 // weapon slots
-                var slotStyle = new GUIStyle(_small) { alignment = TextAnchor.LowerLeft, fontSize = 13 };
-                float x = w - 420;
+                var slotStyle = new GUIStyle(_small) { alignment = TextAnchor.LowerRight, fontSize = 13 };
+                float slotW = 82f;
+                float x = w - 20 - slotW * holder.Weapons.Count;
                 for (int i = 0; i < holder.Weapons.Count; i++)
                 {
                     bool active = i == holder.CurrentIndex;
                     slotStyle.normal.textColor = active ? new Color(1f, 0.85f, 0.3f) : new Color(1f, 1f, 1f, 0.45f);
-                    GUI.Label(new Rect(x, h - 26, 60, 22), $"{i + 1} {Abbrev(holder.Weapons[i].displayName)}", slotStyle);
-                    x += 46;
+                    GUI.Label(new Rect(x, h - 26, slotW - 6, 22), $"{i + 1} {Abbrev(holder.Weapons[i].displayName)}", slotStyle);
+                    x += slotW;
                 }
             }
 
@@ -118,7 +119,7 @@ namespace GunMan
         static string Abbrev(string name)
         {
             if (string.IsNullOrEmpty(name)) return "";
-            return name.Length <= 5 ? name : name.Substring(0, 5);
+            return name.Length <= 7 ? name : name.Substring(0, 7);
         }
     }
 }
