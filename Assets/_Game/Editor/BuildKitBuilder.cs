@@ -69,6 +69,7 @@ namespace GunMan.EditorTools
             {
                 GunManBootstrap.SetTransparent(m);
                 m.SetColor("_BaseColor", color);
+                m.SetColor("_Color", color); // legacy alias, keeps the serialised asset stable
                 m.SetFloat("_Smoothness", 0.1f);
                 m.SetFloat("_Metallic", 0f);
             });

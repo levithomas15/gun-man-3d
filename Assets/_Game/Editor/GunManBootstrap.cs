@@ -133,14 +133,25 @@ namespace GunMan.EditorTools
             return m;
         }
 
+        /// <summary>
+        /// Puts a URP/Lit material into alpha-blended transparency. The blend factors mirror what URP's own
+        /// material validation writes for a transparent surface with _BlendModePreserveSpecular (premultiplied
+        /// alpha, no depth/shadow pass) – otherwise the editor rewrites the asset on every reimport.
+        /// </summary>
         public static void SetTransparent(Material m)
         {
             m.SetFloat("_Surface", 1f);
             m.SetFloat("_Blend", 0f);
             m.SetFloat("_ZWrite", 0f);
-            m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            m.SetFloat("_BlendModePreserveSpecular", 1f);
+            m.SetFloat("_SrcBlend", (float)BlendMode.One);
             m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+            m.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
             m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            m.SetShaderPassEnabled("DepthOnly", false);
+            m.SetShaderPassEnabled("SHADOWCASTER", false);
             m.SetOverrideTag("RenderType", "Transparent");
             m.renderQueue = (int)RenderQueue.Transparent;
         }
