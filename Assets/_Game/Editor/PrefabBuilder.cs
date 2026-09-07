@@ -271,7 +271,7 @@ namespace GunMan.EditorTools
 
         // ------------------------------------------------------------------ player
 
-        public static GameObject BuildPlayer(List<GameObject> weaponPrefabs, BuildKitBuilder.BuildAssets buildAssets = null)
+        public static GameObject BuildPlayer(List<GameObject> weaponPrefabs)
         {
             int playerLayer = BuildUtil.EnsureLayer("Player");
             var root = new GameObject("Player");
@@ -324,13 +324,6 @@ namespace GunMan.EditorTools
                 inst.transform.localRotation = Quaternion.identity;
                 inst.SetActive(i == 0); // WeaponHolder activates the current weapon at runtime
             }
-
-            // Fortnite style wood building (B)
-            var build = root.AddComponent<BuildSystem>();
-            build.player = pc;
-            build.holder = holder;
-            build.cam = cam;
-            if (buildAssets != null) BuildKitBuilder.Apply(build, buildAssets);
             return BuildUtil.SavePrefab(root, "Player");
         }
 

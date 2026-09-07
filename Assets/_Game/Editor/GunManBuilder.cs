@@ -26,13 +26,12 @@ namespace GunMan.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var fx = FxBuilder.Build();
-            var buildKit = BuildKitBuilder.Build();
             var projectiles = PrefabBuilder.BuildProjectiles(fx);
             var weapons = PrefabBuilder.BuildWeapons(fx, projectiles);
             var prefabs = new SceneBuilder.Prefabs
             {
                 fxLibrary = fx.fxLibraryPrefab,
-                player = PrefabBuilder.BuildPlayer(weapons, buildKit),
+                player = PrefabBuilder.BuildPlayer(weapons),
                 npcs = PrefabBuilder.BuildNpcs(weapons),
                 target = PrefabBuilder.BuildTarget(),
                 ammo = PrefabBuilder.BuildAmmoPickup(),

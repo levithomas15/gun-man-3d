@@ -129,16 +129,6 @@ namespace GunMan
             if (impulse.y > 0f) _velocity.y = Mathf.Max(_velocity.y, impulse.y);
         }
 
-        /// <summary>Teleports the player by <paramref name="delta"/> (e.g. onto a floor tile that was just built under the feet).</summary>
-        public void Nudge(Vector3 delta)
-        {
-            bool wasEnabled = _cc.enabled;
-            _cc.enabled = false;
-            transform.position += delta;
-            _cc.enabled = wasEnabled;
-            if (delta.y > 0f && _velocity.y < 0f) _velocity.y = 0f;
-        }
-
         void Update()
         {
             var kb = Keyboard.current;

@@ -36,12 +36,6 @@ Unity 6 (6000.6.0f1) URP First-Person-Shooter-Prototyp. Sprache mit dem Nutzer: 
   den aktiven Gegner, `NpcCharacter` fragt `IsOpponent` ab. Ohne Kampfmodus schießt kein NPC.
 - Waffen-Raycasts ignorieren den Besitzer über `Weapon.RaycastIgnoring(..., ownerTransform)` mit `IsChildOf` –
   nicht `transform.root` verwenden, alle Gameplay-Objekte hängen unter `Gameplay`.
-- Bausystem (`BuildSystem` auf dem Player, Taste B): 4 m-Raster (`BuildGrid`), Meshes werden zur Laufzeit erzeugt
-  (`BuildMeshFactory`, lokaler Ursprung = Zellmitte am Geschossboden, Wand in der XY-Ebene, Treppe steigt nach +Z).
-  Jedes Teil belegt einen `BuildSlot` (Kind 0 = Platte/Boden/Decke, 1/2 = Wand auf z-/x-Rasterlinie, 3 = Zellvolumen
-  für Treppe/Dach) – Boden von Geschoss L+1 und Decke von Geschoss L sind derselbe Slot. `BuildPiece.removedMask`
-  ist die Editier-Maske (Wand 3×3 zeilenweise von unten, Platten/Dach 2×2). Holz-Materialien baut `BuildKitBuilder`
-  aus `Assets/_Game/Textures/Wood` (Wraps müssen Repeat sein, UVs sind Meter × 0,5).
 - Editor-Log des per Hub gestarteten Editors liegt in `Logs/Editor.log` im Projekt (nicht `~/Library/Logs/Unity`).
   `capture_game_view --save_path` darf kein `..` enthalten. Vor `menu`-Builds Play-Modus mit `editor_stop` beenden.
 
